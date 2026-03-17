@@ -1,3 +1,16 @@
 FROM eclipse-temurin:8-jre-focal
-COPY target/app.jar /
-CMD ["java", "-agentlib:jdwp=transport=dt_socket,server=y,address=9009,suspend=n", "-Dcom.sun.management.jmxremote", "-Dcom.sun.management.jmxremote.port=7900", "-Dcom.sun.management.jmxremote.ssl=false", "-Dcom.sun.management.jmxremote.authenticate=false", "-jar", "app.jar"]
+
+# SECURITY FIX: Create non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app
+WORKDIR /app
+
+COPY target/app.jar /app/
+
+# SECURITY FIX: Removed debug agent (-agentlib:jdwp)
+# SECURITY FIX: Removed JMX remote with no auth
+# SECURITY FIX: Run as non-root user
+USER appuser
+
+EXPOSE 8080
+CMD ["java", "-XX:MaxMetaspaceSize=128m", "-Xmx256m", "-jar", "app.jar"]

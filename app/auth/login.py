@@ -1,21 +1,38 @@
 import sqlite3
+from contextlib import contextmanager
+
+
+@contextmanager
+def get_db_connection():
+    """Context manager for safe database connections."""
+    conn = sqlite3.connect('users.db')
+    try:
+        yield conn
+    finally:
+        conn.close()
+
 
 def authenticate_user(username, password):
-    """VULNERABLE: SQL Injection in login"""
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    # VULNERABILITY: Direct string interpolation - SQL Injection
-    query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
-    cursor.execute(query)
-    user = cursor.fetchone()
-    conn.close()
+    """SECURE: Uses parameterized queries to prevent SQL injection."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # FIX: Parameterized query prevents SQL injection
+        cursor.execute(
+            "SELECT * FROM users WHERE username = ? AND password = ?",
+            (username, password)
+        )
+        user = cursor.fetchone()
     return user
 
+
 def get_user_profile(user_id):
-    """VULNERABLE: SQL Injection in profile lookup"""
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM profiles WHERE id = " + str(user_id))
-    profile = cursor.fetchone()
-    conn.close()
+    """SECURE: Uses parameterized queries to prevent SQL injection."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # FIX: Parameterized query prevents SQL injection
+        cursor.execute(
+            "SELECT * FROM profiles WHERE id = ?",
+            (user_id,)
+        )
+        profile = cursor.fetchone()
     return profile
