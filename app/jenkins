@@ -1,0 +1,43 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('Test') {
+            steps {
+                error('Simulating failure')
+            }
+        }
+    }
+    
+    post {
+        always {
+            script {
+                try {
+                    def response = httpRequest(
+                        url: 'http://localhost:8000/webhook/jenkins/pipeline',
+                        httpMode: 'POST',
+                        contentType: 'APPLICATION_JSON',
+                        requestBody: """
+                        {
+                            "build_url":             "${env.BUILD_URL}",
+                            "job_name":              "${env.JOB_NAME}",
+                            "repo_owner":            "madhugudla-collab",
+                            "repo_name":             "devsecops-jenkins-sast-sca-iac-cs-dast-e2e-repo",
+                            "branch":                "main",
+                            "jenkins_user":          "admin",
+                            "jenkins_workspace":     "${env.WORKSPACE}",
+                            "sonarqube_url":         "http://localhost:9000",
+                            "sonarqube_project_key": "easybuggy"
+                        }
+                        """,
+                        validResponseCodes: '200:299',
+                        timeout: 30
+                    )
+                    echo "Security Bot Response: ${response.status} - ${response.content}"
+                } catch (Exception e) {
+                    echo "Bot call failed: ${e.message} — build still passes"
+                }
+            }
+        }
+    }
+}

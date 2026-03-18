@@ -1,0 +1,73 @@
+# ─────────────────────────────────────────────────────────────
+#  SECURITY — NEVER commit secrets or credentials
+# ─────────────────────────────────────────────────────────────
+.env
+*.key
+*.pem
+*.p12
+*.pfx
+*secret*
+*credential*
+*password*
+*token*.txt
+
+# ─────────────────────────────────────────────────────────────
+#  RUNTIME DATA — generated at runtime, too large or sensitive
+# ─────────────────────────────────────────────────────────────
+# Cloned repos (could be GBs)
+data/cloned_repos/
+
+# Security scan reports (may contain sensitive code snippets)
+data/security_reports/
+data/jenkins_logs/
+
+# Vector DB (binary, large)
+data/vector_db/
+
+# PDF docs (binary, large — keep .example copies only if needed)
+data/*.pdf
+app/rag/data/*.pdf
+
+# ─────────────────────────────────────────────────────────────
+#  PYTHON
+# ─────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+ENV/
+.Python
+
+# ─────────────────────────────────────────────────────────────
+#  TESTING
+# ─────────────────────────────────────────────────────────────
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# ─────────────────────────────────────────────────────────────
+#  IDE / OS
+# ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─────────────────────────────────────────────────────────────
+#  LOGS
+# ─────────────────────────────────────────────────────────────
+*.log
+logs/
