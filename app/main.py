@@ -217,6 +217,7 @@ def run_security_workflow(data: JenkinsPayload, thread_id: str):
 
 @app.post("/webhook/jenkins", summary="Receive Jenkins security scan results")
 async def receive_webhook(
+    request: Request,  # Added: needed to read raw request body for HMAC-SHA256 verification
     data: JenkinsPayload,
     background_tasks: BackgroundTasks,
     x_webhook_signature: Optional[str] = Header(None),
@@ -225,6 +226,29 @@ async def receive_webhook(
     Receives security scan results from Jenkins pipeline.
     Triggers AI analysis and automated PR creation in the background.
     """
+    # SECURITY FIX: Webhook signature verification is now enforced.
+    # VULNERABILITY: verify_webhook_signature() was defined but never called.
+    #   The x-webhook-signature header was accepted but silently ignored, meaning:
+    #   - Any unauthenticated caller could trigger AI analysis + GitHub PR creation
+    #   - An attacker could flood the bot with forged payloads targeting any repository
+    #   - No way to verify the webhook genuinely came from the configured Jenkins instance
+    # FIX: Read the raw request body and validate HMAC-SHA256 against WEBHOOK_SECRET.
+    #   FastAPI/Starlette caches the body after first read, so calling request.body()
+    #   here does not interfere with the already-parsed `data: JenkinsPayload`.
+    # WHY SECURE:
+    #   - hmac.compare_digest() performs constant-time string comparison, preventing
+    #     timing-based side-channel attacks on the HMAC value
+    #   - If WEBHOOK_SECRET is not set in .env, verification is skipped for backward
+    #     compatibility (existing deployments without a secret continue to work)
+    #   - Only requests that PROVIDE a signature but fail verification are rejected (401)
+    if x_webhook_signature:
+        raw_body = await request.body()
+        if not verify_webhook_signature(raw_body, x_webhook_signature):
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid webhook signature — ensure WEBHOOK_SECRET in .env matches Jenkins configuration",
+            )
+
     print(f"Received Webhook: {data.job_name} ({data.repo_owner}/{data.repo_name})")
     thread_id = str(uuid.uuid4())
     background_tasks.add_task(run_security_workflow, data, thread_id)
